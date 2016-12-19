@@ -11,10 +11,12 @@ class Worker{
 
     private $callback;
     private $process_num;
-    private $queue;
-    private $retry_interval = [5, 300, 600, 3600, 7800];  //5s 5min 10min 1h 2h
-    private $task_delay = 'ebats.%sD';
-    private $task_ready = 'ebats.%sR';
+    private $topic;
+    private $delay = false;
+    public static $retry_interval = [5, 300, 600, 3600, 7800];  //5s 5min 10min 1h 2h
+    private $task_ready = 'ebats.task.%sR';
+    private $task_delay = 'ebats.task.%sD';
+    private $task_retry = 'ebats.task.d%s';
 
     const STATE_SUCC  = 0;
     const STATE_FAIL  = 1;
@@ -25,8 +27,9 @@ class Worker{
         $this->process_num = $process_num;
     }
 
-    public function setQueue($name) {
-        $this->queue = $name;
+    public function setTopic($topic, $delay = false) {
+        $this->topic = $topic;
+        $this->delay = $delay;
     }
 
     /**
@@ -54,7 +57,7 @@ class Worker{
         $model->$action($task->getParams());
         $endtime = microtime(true); //标记任务执行完成时间
         $timeuse = ($endtime - $timebegin) * 1000; //计算任务执行用时
-        Logs::info("[$topic]{$task->getName()} exec finished, timeuse - {$timeuse}ms.");
+        Logs::info("[$topic]{$task->getId()} exec finished, timeuse - {$timeuse}ms.");
         return $timeuse;
     }
 
@@ -68,19 +71,24 @@ class Worker{
     private function retry($key, $task, $retry, $interval){
         $counter = new Counter($task->getId());
         $fail_times = $counter->get() + 1;
-        $retry_times = $retry ? : count($this->retry_interval);   //重试次数
-        $delay_time = $retry ? $interval : $this->retry_interval[$fail_times]; //重试间隔
-        if ($fail_times > $retry){
+        $retry_times = $retry ? : count(self::$retry_interval);   //重试次数
+        $delay_time = $retry ? $interval : self::$retry_interval[$fail_times - 1]; //重试间隔
+        if ($fail_times > $retry_times){
             $counter->clear();
-            Logs::info("[$key]{$task->getName()} exec failed, retry end.");
+            Logs::info("[$key]{$task->getId()} exec failed, retry end.");
             return $fail_times;
         }
 
-        Logs::info("[$key]{$task->getName()} exec failed, after $delay_time seconds retry[$fail_times/$retry_times].");
+        Logs::info("[$key]{$task->getId()} exec failed, after $delay_time seconds retry[$fail_times/$retry_times].");
+
         $publish = new Publish();
         $publish->setAutoClose(false);
         $publish->setExchange(Scheduler::EXCHANGE_DELAY);
-        $publish->send($task, $key, $delay_time * 1000);
+        $publish->setQueue(sprintf($this->task_retry, $delay_time));
+        $publish->setRoutingKeys([$delay_time]);
+        $publish->setLetter(Scheduler::EXCHANGE_TASKS);
+        $publish->send($task, $delay_time, $delay_time * 1000);
+
         $counter->incr();
         return $fail_times;
     }
@@ -88,8 +96,9 @@ class Worker{
     public function process(\swoole_process $swoole_process){
         try{
             $worker = new Consumer();
-            $worker->setExchange(Scheduler::EXCHANGE_TASK);
-            $worker->setQueue(sprintf($this->task_ready, $this->queue), [$this->queue]);
+            $worker->setExchange(Scheduler::EXCHANGE_READY);
+            $worker->setQueue(sprintf($this->task_ready, $this->topic));
+            $worker->setRoutingKeys([$this->topic]);
             $worker->run(function($key, $task){
                 /** @var Task $task */
                 $timeuse = -1;
@@ -98,15 +107,15 @@ class Worker{
                 $status_msg = 'ok.';
                 try{
                     $timeuse = $this->exec($key, $task);
-                }catch (TaskException $exc){
-                    $status_code = self::STATE_FAIL;
-                    $status_msg = $exc->getMessage();
-                    Logs::error("[$key]{$task->getName()} exec failed  - $status_msg");
                 }catch (RetryException $exc){
                     $status_code = self::STATE_RETRY;
                     $status_msg = $exc->getMessage();
-                    Logs::error("[$key]{$task->getName()} exec failed  - $status_msg");
+                    Logs::error("[$key]{$task->getId()} exec failed  - $status_msg");
                     $exectimes = $this->retry($key, $task, $exc->getRetry(), $exc->getInterval());
+                }catch (TaskException $exc){
+                    $status_code = self::STATE_FAIL;
+                    $status_msg = $exc->getMessage();
+                    Logs::error("[$key]{$task->getId()} exec failed  - $status_msg");
                 }
 
                 //将执行情况回调给上层开发者
@@ -123,13 +132,12 @@ class Worker{
     public function run(){
         Logs::info("Worker start init, process_num is {$this->process_num}.");
 
-        //创建死信队列
         $deadletter = new DeadLetter();
         $deadletter->setExchange(Scheduler::EXCHANGE_DELAY);
-        $deadletter->setQueue(sprintf($this->task_delay, $this->queue), [$this->queue]);
-        $deadletter->setLetterExchange(Scheduler::EXCHANGE_TASK);
-        $deadletter->setLetterRoutingKey($this->queue);
-        $deadletter->init();
+        $deadletter->setQueue(sprintf($this->task_delay, $this->topic));
+        $deadletter->setRoutingKeys([$this->topic]);
+        $deadletter->setLetter(Scheduler::EXCHANGE_READY, $this->topic);
+        $deadletter->create();
 
         //启动Worker
         for($i = 0; $i < $this->process_num; $i++){

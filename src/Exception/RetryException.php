@@ -6,7 +6,7 @@ class RetryException extends \RuntimeException implements ExceptionInterface{
     private $retry;
     private $interval;
 
-    public function __construct($message, $retry = 3, $interval = 300) {
+    public function __construct($message, $retry = null, $interval = null) {
         parent::__construct($message);
         $this->retry = $retry;
         $this->interval = $interval;

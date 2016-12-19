@@ -10,7 +10,6 @@ class Task {
     private $delay;
 
     public function __construct($topic, $name, $delay = 0) {
-        $this->id = $this->setId($topic);
         $this->name = $name;
         $this->topic = $topic;
         $this->delay = $delay * 1000;
@@ -21,6 +20,7 @@ class Task {
     }
 
     public function setParams($params) {
+        $this->id = $this->setId($this->topic);
         $this->params = $params;
     }
 

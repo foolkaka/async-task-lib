@@ -12,7 +12,7 @@ class Consumer {
     public function run($process){
         $connection = AmqFactory::factory();
         $channel = $connection->channel();
-        $channel->queue_declare($this->getQueueName(), false, true, false, false);
+        $channel->queue_declare($this->getQueueName(), false, true, false, false, false, $this->getArguments());
         if ($this->existsExchange()){
             $channel->exchange_declare($this->getExchangeName(), $this->getExchangeType(), false, true, false, false);
             foreach ($this->getRoutingKeys() as $routing_key){

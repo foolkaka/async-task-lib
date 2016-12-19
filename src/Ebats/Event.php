@@ -2,12 +2,13 @@
 namespace Asynclib\Ebats;
 
 use Asynclib\Core\Publish;
-class Event {
+class Event extends Publish{
 
     private $event;
     private $params;
 
     public function __construct($event_name) {
+        parent::__construct();
         $this->event = $event_name;
     }
 
@@ -15,17 +16,16 @@ class Event {
         $this->params = $options;
     }
 
-    public function getEvent() {
+    private function getEvent() {
         return $this->event;
     }
 
-    public function getParams() {
+    private function getParams() {
         return $this->params;
     }
 
     public function publish() {
-        $worker = new Publish();
-        $worker->setExchange(Scheduler::EXCHANGE_EVENT);
-        $worker->send($this->getParams(), $this->getEvent(), false);
+        $this->setExchange(Scheduler::EXCHANGE_EVENT);
+        $this->send($this->getParams(), $this->getEvent(), false);
     }
 }

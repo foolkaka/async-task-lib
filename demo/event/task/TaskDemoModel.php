@@ -14,7 +14,7 @@ class TaskDemoModel {
      * @param array $params 事件产生的参数
      */
     public function closeOrderTask($params){
-//        var_dump($params);
+        //        var_dump($params);
 
         return false;
     }
@@ -28,8 +28,9 @@ class TaskDemoModel {
 
         //根据业务需求抛出不同异常,TaskException为普通异常,RetryException为需要重试的异常
 //        throw new TaskException('获取数据失败');
-        throw new RetryException('获取数据失败233', 1, 5); //默认为系统统一配置
-//        throw new RetryException('获取数据失败123', 3, 5);  //错误信息,重试次数,重试间隔
+//        throw new RetryException('重试任务'); //默认为系统统一配置
+//        throw new RetryException('30秒任务', 2, 30); //错误信息,重试次数,重试间隔
+        throw new RetryException('5秒任务', 5, 15);  //错误信息,重试次数,重试间隔
 
     }
 
