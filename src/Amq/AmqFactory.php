@@ -25,7 +25,10 @@ class AmqFactory {
 
     private static function getConnection(){
         try{
-            return new AMQPStreamConnection(self::$amq_host, self::$amq_port, self::$amq_user, self::$amq_pass, self::$amq_vhost);
+            return new AMQPStreamConnection(
+                self::$amq_host, self::$amq_port, self::$amq_user, self::$amq_pass, self::$amq_vhost,
+                false, 'AMQPLAIN', null, 'en_US', 3.0, 10, null, false, 5
+            );
         }catch (\Exception $exc){
             throw new ConnectionedException($exc->getMessage());
         }
