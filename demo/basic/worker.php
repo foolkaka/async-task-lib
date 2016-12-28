@@ -3,11 +3,12 @@ require_once __DIR__.'/../autoload.php';
 use Asynclib\Core\Consumer;
 use Asynclib\Exception\ExceptionInterface;
 
-$worker = new Consumer();
-$worker->setExchange('demo_basic');
-$worker->setQueue('demo_basic_queue');
-$worker->setRoutingKeys(['abc']);
-$worker->run(function($key, $msg){
+$consumer = new Consumer();
+$consumer->setExchange('demo_basic');
+$consumer->setQueue('demo_basic_queue');
+$consumer->setRoutingKeys(['abc']);
+$consumer->setSerialize(false);
+$consumer->run(function($key, $msg){
     echo " [$key] $msg \n";
 //    throw new Exception('test');
 });

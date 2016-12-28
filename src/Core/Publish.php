@@ -12,6 +12,7 @@ class Publish {
 
     private $connection;
     private $auto_close = true;
+    private $serialize = true;
 
     public function __construct() {
         $this->connection = AmqFactory::factory();
@@ -19,6 +20,18 @@ class Publish {
 
     public function setAutoClose($auto_close) {
         $this->auto_close = $auto_close;
+    }
+
+    private function isAutoClose() {
+        return $this->auto_close;
+    }
+
+    public function setSerialize($serialize) {
+        $this->serialize = $serialize;
+    }
+
+    private function isSerialize() {
+        return $this->serialize;
     }
 
     public function send($data, $routing_key = '', $delay = 0){
@@ -32,17 +45,18 @@ class Publish {
         }
 
         $raw_data = ['etime' => time() + $delay, 'body' => $data];
-        $properties = ['content_type' => 'text/plain', 'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT];
-        $toSend = new AMQPMessage(serialize($raw_data), $properties);
+        $message = new AMQPMessage($this->isSerialize() ? serialize($raw_data) : json_encode($raw_data));
+        $message->set('content_type', 'text/plain');
+        $message->set('delivery_mode', AMQPMessage::DELIVERY_MODE_PERSISTENT);
         if ($delay){
-            $toSend->set('expiration', $delay);
+            $message->set('expiration', $delay);
         }
-        $channel->basic_publish($toSend, $this->getExchangeName(), $routing_key);
+        $channel->basic_publish($message, $this->getExchangeName(), $routing_key);
         $channel->close();
     }
 
     public function __destruct() {
-        if ($this->auto_close){
+        if ($this->isAutoClose()){
             $this->connection->close();
         }
     }

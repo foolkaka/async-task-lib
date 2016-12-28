@@ -9,6 +9,16 @@ class Consumer {
 
     use Queue, Exchange;
 
+    private $serialize = true;
+
+    public function setSerialize($serialize) {
+        $this->serialize = $serialize;
+    }
+
+    private function isSerialize() {
+        return $this->serialize;
+    }
+
     public function run($process){
         $connection = AmqFactory::factory();
         $channel = $connection->channel();
@@ -25,7 +35,7 @@ class Consumer {
          */
         $callback = function($message) use ($process) {
             $routing_key = $message->delivery_info['routing_key'];
-            $raw_data = unserialize($message->getBody());
+            $raw_data = $this->isSerialize() ? unserialize($message->getBody()) : json_decode($message->getBody(), 1);
 
             call_user_func($process, $routing_key, $raw_data['body'], $raw_data['etime']);
             $message->delivery_info['channel']->basic_ack($message->delivery_info['delivery_tag']);
