@@ -20,6 +20,10 @@ class AmqFactory {
             self::$amq_connection = self::getConnection();
         }
 
+        if (!self::$amq_connection->isConnected()){
+            self::$amq_connection->reconnect();
+        }
+
         return self::$amq_connection;
     }
 

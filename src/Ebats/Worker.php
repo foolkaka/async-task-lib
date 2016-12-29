@@ -93,13 +93,23 @@ class Worker{
         return $fail_times;
     }
 
+    private function initDeadLetter(){
+        $deadletter = new DeadLetter();
+        $deadletter->setExchange(Scheduler::EXCHANGE_DELAY);
+        $deadletter->setQueue(sprintf($this->task_delay, $this->topic));
+        $deadletter->setRoutingKeys([$this->topic]);
+        $deadletter->setLetter(Scheduler::EXCHANGE_READY, $this->topic);
+        $deadletter->create();
+    }
+
     public function process(\swoole_process $swoole_process){
         try{
-            $worker = new Consumer();
-            $worker->setExchange(Scheduler::EXCHANGE_READY);
-            $worker->setQueue(sprintf($this->task_ready, $this->topic));
-            $worker->setRoutingKeys([$this->topic]);
-            $worker->run(function($key, $task){
+            $this->initDeadLetter();
+            $consumer = new Consumer();
+            $consumer->setExchange(Scheduler::EXCHANGE_READY);
+            $consumer->setQueue(sprintf($this->task_ready, $this->topic));
+            $consumer->setRoutingKeys([$this->topic]);
+            $consumer->run(function($key, $task){
                 /** @var Task $task */
                 $timeuse = -1;
                 $exectimes = 1;
@@ -131,14 +141,6 @@ class Worker{
 
     public function run(){
         Logs::info("Worker start init, process_num is {$this->process_num}.");
-
-        $deadletter = new DeadLetter();
-        $deadletter->setExchange(Scheduler::EXCHANGE_DELAY);
-        $deadletter->setQueue(sprintf($this->task_delay, $this->topic));
-        $deadletter->setRoutingKeys([$this->topic]);
-        $deadletter->setLetter(Scheduler::EXCHANGE_READY, $this->topic);
-        $deadletter->create();
-
         //启动Worker
         for($i = 0; $i < $this->process_num; $i++){
             $process = new \swoole_process([$this, 'process']);
