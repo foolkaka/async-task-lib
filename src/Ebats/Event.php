@@ -25,7 +25,8 @@ class Event extends Publish{
     }
 
     public function publish() {
+        $this->setAutoClose(false);
         $this->setExchange(Scheduler::EXCHANGE_EVENT);
-        $this->send($this->getParams(), $this->getEvent(), false);
+        $this->send($this->getParams(), $this->getEvent());
     }
 }
