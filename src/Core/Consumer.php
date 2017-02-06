@@ -37,8 +37,12 @@ class Consumer {
             $routing_key = $message->delivery_info['routing_key'];
             $raw_data = $this->isSerialize() ? unserialize($message->getBody()) : json_decode($message->getBody(), 1);
 
-            call_user_func($process, $routing_key, $raw_data['body'], $raw_data['etime']);
-            $message->delivery_info['channel']->basic_ack($message->delivery_info['delivery_tag']);
+            $result = call_user_func($process, $routing_key, $raw_data['body'], $raw_data['etime']);
+            if ($result == false){
+                $message->delivery_info['channel']->basic_nack($message->delivery_info['delivery_tag']);
+            }else{
+                $message->delivery_info['channel']->basic_ack($message->delivery_info['delivery_tag']);
+            }
         };
         $channel->basic_consume($this->getQueueName(), '', false, false, false, false, $callback);
         while(count($channel->callbacks)) {

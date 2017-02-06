@@ -5,6 +5,7 @@ use Asynclib\Core\Consumer;
 use Asynclib\Core\DeadLetter;
 use Asynclib\Core\Logs;
 use Asynclib\Core\Publish;
+use Asynclib\Exception\ServiceException;
 use Asynclib\Exception\RetryException;
 use Asynclib\Exception\TaskException;
 class Worker{
@@ -18,6 +19,7 @@ class Worker{
     private $task_delay = 'ebats.task.%sD';
     private $task_retry = 'ebats.task.d%s';
 
+    const STATE_ERR   = -1;
     const STATE_SUCC  = 0;
     const STATE_FAIL  = 1;
     const STATE_RETRY = 2;
@@ -117,19 +119,25 @@ class Worker{
                 $status_msg = 'ok.';
                 try{
                     $timeuse = $this->exec($key, $task);
+                }catch (ServiceException $exc){
+                    $status_code = self::STATE_ERR;
+                    $status_msg = $exc->getMessage();
+                    Logs::error("[$key]{$task->getName()} exec failed  - $status_msg");
                 }catch (RetryException $exc){
                     $status_code = self::STATE_RETRY;
                     $status_msg = $exc->getMessage();
-                    Logs::error("[$key]{$task->getId()} exec failed  - $status_msg");
+                    Logs::error("[$key]{$task->getName()} exec failed  - $status_msg");
                     $exectimes = $this->retry($key, $task, $exc->getRetry(), $exc->getInterval());
                 }catch (TaskException $exc){
                     $status_code = self::STATE_FAIL;
                     $status_msg = $exc->getMessage();
-                    Logs::error("[$key]{$task->getId()} exec failed  - $status_msg");
+                    Logs::error("[$key]{$task->getName()} exec failed  - $status_msg");
                 }
 
                 //将执行情况回调给上层开发者
                 call_user_func($this->callback, $task, $status_code, $status_msg, $exectimes, $timeuse);
+
+                return $status_code == self::STATE_ERR ? false : true;
             });
 
             $swoole_process->exit(0);
