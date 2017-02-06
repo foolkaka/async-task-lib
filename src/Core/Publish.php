@@ -36,9 +36,13 @@ class Publish {
 
     public function send($data, $routing_key = '', $delay = 0){
         $channel = $this->connection->channel();
-        $channel->exchange_declare($this->getExchangeName(), $this->getExchangeType(), false, true, false);
+        if ($this->existsExchange()){
+            $channel->exchange_declare($this->getExchangeName(), $this->getExchangeType(), false, true, false);
+        }
         if ($this->getQueueName()){
             $channel->queue_declare($this->getQueueName(), false, true, false, false, false, $this->getArguments());
+        }
+        if ($this->getQueueName() && $this->existsExchange()){
             foreach ($this->getRoutingKeys() as $routing_key){
                 $channel->queue_bind($this->getQueueName(), $this->getExchangeName(), $routing_key);
             }

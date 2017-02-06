@@ -4,6 +4,7 @@ namespace Asynclib\Core;
 use Asynclib\Amq\Exchange;
 use Asynclib\Amq\Queue;
 use Asynclib\Amq\AmqFactory;
+use Asynclib\Exception\ServiceException;
 use PhpAmqpLib\Message\AMQPMessage;
 class Consumer {
 
@@ -37,11 +38,12 @@ class Consumer {
             $routing_key = $message->delivery_info['routing_key'];
             $raw_data = $this->isSerialize() ? unserialize($message->getBody()) : json_decode($message->getBody(), 1);
 
-            $result = call_user_func($process, $routing_key, $raw_data['body'], $raw_data['etime']);
-            if ($result == false){
-                $message->delivery_info['channel']->basic_nack($message->delivery_info['delivery_tag']);
-            }else{
+            try{
+                call_user_func($process, $routing_key, $raw_data['body'], $raw_data['etime']);
                 $message->delivery_info['channel']->basic_ack($message->delivery_info['delivery_tag']);
+            }catch (ServiceException $exc){
+                usleep(100*1000);
+                $message->delivery_info['channel']->basic_nack($message->delivery_info['delivery_tag'], false, true);
             }
         };
         $channel->basic_consume($this->getQueueName(), '', false, false, false, false, $callback);

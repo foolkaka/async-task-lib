@@ -16,7 +16,7 @@ $callback = function ($task, $status_code, $status_msg, $exectimes, $timeuse){
     
 };
 try{
-    $worker = new Worker($callback);  //支持多进程消费默认为1
+    $worker = new Worker($callback, 3);  //支持多进程消费默认为1
     $worker->setTopic('demo', true);  //队列名和事件的topic一一对应
     $worker->run();
 }catch (\Exception $exc){

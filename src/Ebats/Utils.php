@@ -13,7 +13,7 @@ class Utils {
 
         $publish = new Publish();
         $publish->setAutoClose(false);
-        $publish->setExchange(Scheduler::EXCHANGE_READY);
+        $publish->setExchange(Service::EXCHANGE_READY);
         $publish->send($task, $task->getTopic(), $task->getDelay());
     }
 }

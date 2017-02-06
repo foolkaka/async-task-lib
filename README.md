@@ -45,7 +45,7 @@ With Event mode running open three Terminals and on the first one execute the fo
 
 ```bash
 $ cd php-async-lib/demo
-$ php event/scheduler.php
+$ php event/service.php
 ```
 
 Then on the second Terminal do:

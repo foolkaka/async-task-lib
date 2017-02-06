@@ -6,6 +6,7 @@
  */
 use Asynclib\Exception\TaskException;
 use Asynclib\Exception\RetryException;
+use Asynclib\Exception\ServiceException;
 class TaskDemoModel {
 
 
@@ -30,8 +31,8 @@ class TaskDemoModel {
 //        throw new TaskException('获取数据失败');
 //        throw new RetryException('重试任务'); //默认为系统统一配置
 //        throw new RetryException('30秒任务', 2, 30); //错误信息,重试次数,重试间隔
-        throw new RetryException('5秒任务', 5, 15);  //错误信息,重试次数,重试间隔
-
+//        throw new RetryException('5秒任务', 5, 5);  //错误信息,重试次数,重试间隔
+        throw new ServiceException('服务异常');
     }
 
     public function orderAsyncTask($params){

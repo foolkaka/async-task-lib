@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__.'/../autoload.php';
-use Asynclib\Ebats\Scheduler;
+use Asynclib\Ebats\Service;
 use Asynclib\Ebats\Task;
 use Asynclib\Core\Publish;
 
@@ -9,7 +9,7 @@ try{
     $task->setParams(['acc' => 123]);
 
     $publish = new Publish();
-    $publish->setExchange(Scheduler::EXCHANGE_DELAY);
+    $publish->setExchange(Service::EXCHANGE_DELAY);
     $publish->send($task, $task->getTopic(), $task->getDelay());
 }catch (Exception $exc){
     echo $exc->getMessage();
