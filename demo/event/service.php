@@ -8,7 +8,6 @@ EventManager::register('order_create', 'closeOrder', 'demo', 60);//关闭未付�
 EventManager::register('order_paied', 'virtualShipping', 'demo'); //虚拟商品自动发货
 
 //启动调度器
-$service = new Service();
-$service->start();
+Service::start();
 
 //Service为系统常驻进程,建议使用pm2进行进程管理,防止异常情况下进程挂掉

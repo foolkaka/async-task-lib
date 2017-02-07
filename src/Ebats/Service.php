@@ -15,7 +15,7 @@ class Service {
     const QUEUE_SCALER = 'ebats.scaler';
 
 
-    public function start(){
+    public static function start(){
         Logs::info("Service init");
         //启动Worker
         $children = [];
@@ -25,7 +25,7 @@ class Service {
                 continue;
             }
 
-            $process = new \swoole_process([$this, $method]);
+            $process = new \swoole_process([self::class, $method]);
             $pid = $process->start();
             $children[] = $pid;
         }
@@ -39,7 +39,7 @@ class Service {
         }
     }
 
-    public function listenScaler(\swoole_process $swoole_process){
+    public static function listenScaler(\swoole_process $swoole_process){
         Logs::info('Scaler start.');
         $consumer = new Consumer();
         $consumer->setQueue(self::QUEUE_SCALER);
@@ -54,7 +54,7 @@ class Service {
         });
     }
 
-    public function listenEvent() {
+    public static function listenEvent() {
         $events = EventManager::getEvents();
         Logs::info('Loaded event '. json_encode($events).'.');
         Logs::info('Service-event start.');
@@ -78,7 +78,7 @@ class Service {
         });
     }
 
-    public function listenTask() {
+    public static function listenTask() {
         Logs::info('Service-task start.');
         $consumer = new Consumer();
         $consumer->setExchange(self::EXCHANGE_TASKS);
