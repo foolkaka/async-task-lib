@@ -16,5 +16,6 @@ class DeadLetter{
         foreach ($this->getRoutingKeys() as $routing_key){
             $channel->queue_bind($this->getQueueName(), $this->getExchangeName(), $routing_key);
         }
+        $channel->close();
     }
 }
