@@ -19,13 +19,13 @@ class Service {
         Logs::info("Service init");
         //启动Worker
         $children = [];
-        $methods = get_class_methods(self::class);
+        $methods = get_class_methods(__CLASS__);
         foreach ($methods as $method){
             if ($method == 'start'){
                 continue;
             }
 
-            $process = new \swoole_process([self::class, $method]);
+            $process = new \swoole_process([__CLASS__, $method]);
             $pid = $process->start();
             $children[] = $pid;
         }
