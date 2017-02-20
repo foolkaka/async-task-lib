@@ -11,4 +11,5 @@ $consumer->setSerialize(false);
 $consumer->run(function($key, $msg){
     echo " [$key] $msg \n";
 //    throw new Exception('test');
+    sleep(10);
 });

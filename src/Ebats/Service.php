@@ -21,13 +21,11 @@ class Service {
         $children = [];
         $methods = get_class_methods(__CLASS__);
         foreach ($methods as $method){
-            if ($method == 'start'){
+            if (!stripos($method, 'Scheduler')){
                 continue;
             }
 
-            $process = new \swoole_process([__CLASS__, $method]);
-            $pid = $process->start();
-            $children[] = $pid;
+            $children[] = self::processCreate($method);
         }
 
         //回收子进程
@@ -39,8 +37,8 @@ class Service {
         }
     }
 
-    public static function listenScaler(\swoole_process $swoole_process){
-        Logs::info('Scaler start.');
+    public static function scalerScheduler(\swoole_process $swoole_process){
+        Logs::info('scalerScheduler start.');
         $consumer = new Consumer();
         $consumer->setQueue(self::QUEUE_SCALER);
         $consumer->run(function($key, $data){
@@ -54,10 +52,10 @@ class Service {
         });
     }
 
-    public static function listenEvent() {
+    public static function eventScheduler() {
         $events = EventManager::getEvents();
         Logs::info('Loaded event '. json_encode($events).'.');
-        Logs::info('Service-event start.');
+        Logs::info('eventScheduler start.');
         $consumer = new Consumer();
         $consumer->setExchange(self::EXCHANGE_EVENT);
         $consumer->setQueue(self::QUEUE_EVENT);
@@ -78,8 +76,8 @@ class Service {
         });
     }
 
-    public static function listenTask() {
-        Logs::info('Service-task start.');
+    public static function taskScheduler() {
+        Logs::info('taskScheduler start.');
         $consumer = new Consumer();
         $consumer->setExchange(self::EXCHANGE_TASKS);
         $consumer->setQueue(self::QUEUE_TASKS);
@@ -92,5 +90,26 @@ class Service {
             $publish->send($task, $task->getTopic(), $task->getDelay());
             Logs::info("[{$task->getTopic()}] {$task->getName()} published, delay: {$task->getDelay()}");
         });
+    }
+
+    private static function processCreate($scheduler){
+        $children = [];
+        for ($i = 0; $i < self::getProcessNum($scheduler); $i++){
+            $process = new \swoole_process([__CLASS__, $scheduler]);
+            $pid = $process->start();
+            $children[] = $pid;
+        }
+        return $children;
+    }
+
+    private static function getProcessNum($scheduler_name){
+        switch ($scheduler_name){
+            case 'eventScheduler':
+                return defined('EBATS_EVENT_NUM') ? EBATS_EVENT_NUM : 1;
+            case 'taskScheduler':
+                return defined('EBATS_TASKS_NUM') ? EBATS_TASKS_NUM : 1;
+            default:
+                return 1;
+        }
     }
 }
