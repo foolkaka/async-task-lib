@@ -25,7 +25,7 @@ class Service {
                 continue;
             }
 
-            $children[] = self::processCreate($method);
+            $children = array_merge($children, self::processCreate($method));
         }
 
         //回收子进程
