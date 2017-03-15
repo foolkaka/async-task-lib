@@ -16,7 +16,7 @@ class Logs {
     }
 
     private static function output($level, $message){
-        if (!defined('EBATS_DEBUG') ||  !EBATS_DEBUG){
+        if (!defined('EBATS_DEBUG') || !EBATS_DEBUG){
             return;
         }
 
@@ -30,7 +30,7 @@ class Logs {
             default:
                 $font_color = '34m';
         }
-        $time = date('m-d H:i:s');
-        passthru("echo -e '\033[{$font_color}[$time] $message \033[0m'");
+
+        printf("\033[%s[%s] %s \033 \r\n", $font_color, date('m-d H:i:s'), $message);
     }
 }

@@ -77,11 +77,11 @@ class Worker{
         $delay_time = $retry ? $interval : self::$retry_interval[$fail_times - 1]; //重试间隔
         if ($fail_times > $retry_times){
             $scaler->cleanFanout();
-            Logs::info("[$key]{$task->getName()} exec failed, retry end.");
+            Logs::error("[$key]{$task->getName()} exec failed, retry end.");
             return $fail_times;
         }
 
-        Logs::info("[$key]{$task->getName()} exec failed, after $delay_time seconds retry[$fail_times/$retry_times].");
+        Logs::warning("[$key]{$task->getName()} exec failed, after $delay_time seconds retry[$fail_times/$retry_times].");
 
         $publish = new Publish();
         $publish->setAutoClose(false);
@@ -122,16 +122,20 @@ class Worker{
                 }catch (ServiceException $exc){
                     $status_code = self::STATE_ERR;
                     $status_msg = $exc->getMessage();
-                    Logs::error("[$key]{$task->getName() } exec failed  - $status_msg");
+                    Logs::warning("[$key]{$task->getName()} exec failed  - $status_msg");
                 }catch (RetryException $exc){
                     $status_code = self::STATE_RETRY;
                     $status_msg = $exc->getMessage();
-                    Logs::error("[$key]{$task->getName()} exec failed  - $status_msg");
+                    Logs::warning("[$key]{$task->getName()} exec failed  - $status_msg");
                     $exectimes = $this->retry($key, $task, $exc->getRetry(), $exc->getInterval());
                 }catch (TaskException $exc){
                     $status_code = self::STATE_FAIL;
                     $status_msg = $exc->getMessage();
-                    Logs::error("[$key]{$task->getName()} exec failed  - $status_msg");
+                    Logs::warning("[$key]{$task->getName()} exec failed  - $status_msg");
+                }catch (\Exception $exc){
+                    $status_code = self::STATE_FAIL;
+                    $status_msg = $exc->getMessage();
+                    Logs::error("[$key]{$task->getName()} exec errored  - $status_msg");
                 }
 
                 //将执行情况回调给上层开发者
@@ -165,7 +169,7 @@ class Worker{
         }
         Logs::info("Worker init finished.\n");
         while($ret = \swoole_process::wait(true)) {
-            Logs::info("Worker exited - PID={$ret['pid']}\n");
+            Logs::error("Worker exited - PID={$ret['pid']}\n");
         }
     }
 }
