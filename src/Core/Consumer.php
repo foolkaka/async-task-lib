@@ -5,12 +5,17 @@ use Asynclib\Amq\Exchange;
 use Asynclib\Amq\Queue;
 use Asynclib\Amq\AmqFactory;
 use Asynclib\Exception\ServiceException;
+use PhpAmqpLib\Channel\AbstractChannel;
+use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Message\AMQPMessage;
 class Consumer {
 
     use Queue, Exchange;
 
     private $serialize = true;
+    
+    /** @var AMQPChannel */
+    private $channel;
 
     public function setSerialize($serialize) {
         $this->serialize = $serialize;
@@ -30,7 +35,20 @@ class Consumer {
                 $channel->queue_bind($this->getQueueName(), $this->getExchangeName(), $routing_key);
             }
         }
+        $this->channel = $channel;
 
+        //增加断线重连机制,处理因网络异常导致的连接断开
+        try{
+            $this->consume($process);
+        }catch (\Exception $exc){
+            $connection->reconnect();
+            $this->channel = $connection->channel();
+            $this->consume($process);
+        }
+        $connection->close();
+    }
+
+    private function consume($process) {
         /**
          * @param AMQPMessage $message
          */
@@ -46,12 +64,12 @@ class Consumer {
                 $message->delivery_info['channel']->basic_nack($message->delivery_info['delivery_tag'], false, true);
             }
         };
-        $channel->basic_consume($this->getQueueName(), '', false, false, false, false, $callback);
-        while(count($channel->callbacks)) {
-            $channel->wait();
+
+        $this->channel->basic_consume($this->getQueueName(), '', false, false, false, false, $callback);
+        while(count($this->channel->callbacks)) {
+            $this->channel->wait();
         }
 
-        $channel->close();
-        $connection->close();
+        $this->channel->close();
     }
 }
