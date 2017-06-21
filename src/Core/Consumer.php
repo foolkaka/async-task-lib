@@ -5,7 +5,6 @@ use Asynclib\Amq\Exchange;
 use Asynclib\Amq\Queue;
 use Asynclib\Amq\AmqFactory;
 use Asynclib\Exception\ServiceException;
-use PhpAmqpLib\Channel\AbstractChannel;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Message\AMQPMessage;
 class Consumer {
@@ -13,7 +12,7 @@ class Consumer {
     use Queue, Exchange;
 
     private $serialize = true;
-    
+
     /** @var AMQPChannel */
     private $channel;
 
